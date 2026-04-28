@@ -16,14 +16,11 @@ app.use(cors({
 
 const JWT_SECRET = "secret123";
 
-// ================= DB =================
 mongoose.connect("mongodb://localhost:27017/carrental")
 .then(()=>console.log("DB connected"))
 .catch(err=>console.log(err));
 
-// ================= SCHEMAS =================
 
-// USER
 const User = mongoose.model("users", {
     name: String,
     email: { type: String, unique: true },
@@ -31,7 +28,6 @@ const User = mongoose.model("users", {
     role: { type: String, default: "user" }
 });
 
-// CAR
 const Car = mongoose.model("cars", {
     name: String,
     image: String,
@@ -39,7 +35,6 @@ const Car = mongoose.model("cars", {
     description: String
 });
 
-// CART
 const cartSchema = new mongoose.Schema({
     userId: String,
     carId: String,
@@ -49,7 +44,6 @@ const cartSchema = new mongoose.Schema({
 });
 const Cart = mongoose.model("cart", cartSchema);
 
-// BOOKING
 const bookingSchema = new mongoose.Schema({
     userId: String,
     carName: String,
@@ -59,7 +53,6 @@ const bookingSchema = new mongoose.Schema({
 });
 const Booking = mongoose.model("bookings", bookingSchema);
 
-// ================= MIDDLEWARE =================
 
 const auth = (req, res, next) => {
     const token = req.cookies.token;
@@ -80,7 +73,6 @@ const adminOnly = (req, res, next) => {
     next();
 };
 
-// ================= AUTH =================
 
 app.post("/signup", async (req, res) => {
     try {
@@ -122,7 +114,6 @@ app.get("/me", auth, async (req, res) => {
     res.send(user);
 });
 
-// ================= CARS =================
 
 app.post("/admin/cars", auth, adminOnly, async (req, res) => {
     await new Car(req.body).save();
@@ -144,7 +135,6 @@ app.delete("/admin/cars/:id", auth, adminOnly, async (req, res) => {
     res.send("Car deleted");
 });
 
-// ================= CART =================
 
 app.post("/cart", auth, async (req, res) => {
     try {
@@ -175,9 +165,7 @@ app.delete("/cart/:id", auth, async (req, res) => {
     res.send("Deleted");
 });
 
-// ================= BOOKINGS =================
 
-// CREATE BOOKING
 app.post("/book", auth, async (req, res) => {
     try {
         const { carName, totalPrice, image } = req.body;
@@ -195,12 +183,10 @@ app.post("/book", auth, async (req, res) => {
     }
 });
 
-// GET BOOKINGS
 app.get("/bookings", auth, async (req, res) => {
     res.send(await Booking.find({ userId: req.user.userId }));
 });
 
-// UPDATE BOOKING (PUT)
 app.put("/bookings/:id", auth, async (req, res) => {
     await Booking.findByIdAndUpdate(req.params.id, {
         status: req.body.status
@@ -208,11 +194,9 @@ app.put("/bookings/:id", auth, async (req, res) => {
     res.send("Updated");
 });
 
-// ADMIN VIEW
 app.get("/admin/bookings", auth, adminOnly, async (req, res) => {
     res.send(await Booking.find());
 });
 
-// ================= START =================
 
 app.listen(7000, () => console.log("Server running"));
