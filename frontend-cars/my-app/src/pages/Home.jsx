@@ -1,176 +1,275 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Container,
     Typography,
     Button,
-    Grid,
     Box,
-    CircularProgress,
+    Grid,
+    Paper
 } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import api from '../services/api';
-import CarCard from '../components/CarCard';
+import LockIcon from '@mui/icons-material/Lock';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import SecurityIcon from '@mui/icons-material/Security';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import { useAuth } from '../context/AuthContext';
+import SpeedIcon from '@mui/icons-material/Speed';
+import VerifiedIcon from '@mui/icons-material/Verified';
 
 const Home = () => {
     const navigate = useNavigate();
-    const [featuredCars, setFeaturedCars] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchCars = async () => {
-            try {
-                const { data } = await api.get('/cars');
-                setFeaturedCars(data.slice(0, 3));
-            } catch (error) {
-                console.error('Error fetching cars:', error);
-                setFeaturedCars([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchCars();
-    }, []);
+    const { user } = useAuth();
 
     return (
         <Box>
-            <Box className="hero-section">
-                <Box className="hero-content">
-                    <Typography variant="h1" className="hero-title">
-                        Drive Your Dreams
-                    </Typography>
-                    <br />
-                    <Typography variant="h5" className="hero-subtitle">
-                        Experience the thrill of luxury with our exclusive collection of
-                        premium vehicles. From supercars to luxury sedans, we have the
-                        perfect ride for every occasion.
-                    </Typography>
-                    <br />
-                    <Button
-                        variant="contained"
-                        size="large"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => navigate('/cars')}
-                        className="hero-button"
+
+            <Box
+                sx={{
+                    height: '80vh',
+                    backgroundImage:
+                        "url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1600&q=80')",
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    color: 'white',
+                    position: 'relative'
+                }}
+            >
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'rgba(0,0,0,0.6)',
+                        zIndex: 0
+                    }}
+                />
+
+                <Box sx={{ maxWidth: 800, p: 3, zIndex: 1 }}>
+                    <Typography
+                        variant="h1"
                         sx={{
-                            background: '#e94560',
-                            px: 4,
-                            py: 1.5,
-                            fontSize: '1.1rem',
-                            textTransform: 'none',
-                            '&:hover': { background: '#d63550' },
+                            fontWeight: 800,
+                            mb: 2,
+                            fontSize: { xs: '2.5rem', md: '4rem' }
                         }}
                     >
-                        Explore Our Fleet
-                    </Button>
+                        LuxDrive
+                    </Typography>
+
+                    <Typography variant="h4" sx={{ mb: 2 }}>
+                        Premium Car Rental
+                    </Typography>
+
+                    <Typography variant="h6" sx={{ mb: 4 }}>
+                        Experience luxury on wheels with our exclusive fleet
+                    </Typography>
+
+                    {user ? (
+                        <Button
+                            variant="contained"
+                            size="large"
+                            endIcon={<ArrowForwardIcon />}
+                            onClick={() => navigate('/cars')}
+                            sx={{
+                                background: '#e94560',
+                                px: 4,
+                                py: 1.5,
+                                textTransform: 'none'
+                            }}
+                        >
+                            Explore Our Fleet
+                        </Button>
+                    ) : (
+                        <Box>
+                            <Button
+                                variant="contained"
+                                size="large"
+                                startIcon={<LockIcon />}
+                                onClick={() => navigate('/login')}
+                                sx={{
+                                    background: '#e94560',
+                                    px: 4,
+                                    py: 1.5,
+                                    textTransform: 'none'
+                                }}
+                            >
+                                Login to View Cars
+                            </Button>
+
+                            <Typography sx={{ mt: 2 }}>
+                                New user?{' '}
+                                <Button
+                                    onClick={() => navigate('/signup')}
+                                    sx={{ color: '#e94560', textTransform: 'none' }}
+                                >
+                                    Sign Up
+                                </Button>
+                            </Typography>
+                        </Box>
+                    )}
                 </Box>
             </Box>
 
             <Container maxWidth="lg" sx={{ py: 8 }}>
-                <Box sx={{ textAlign: 'center', mb: 6 }}>
-                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
-                        Featured Vehicles
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-                        Handpicked from our premium collection, these vehicles represent the
-                        pinnacle of automotive excellence.
-                    </Typography>
-                </Box>
-
-                {loading ? (
-                    <Box className="loading-container">
-                        <CircularProgress sx={{ color: '#e94560' }} />
-                    </Box>
-                ) : (
-                    <>
-                        {featuredCars.length === 0 ? (
-                            <Box sx={{ textAlign: 'center', py: 4 }}>
-                                <Typography variant="h6" color="text.secondary">
-                                    No cars available yet. Visit the Cars page to add them!
-                                </Typography>
-                                <Button
-                                    variant="contained"
-                                    sx={{ mt: 2, background: '#e94560', textTransform: 'none' }}
-                                    onClick={() => navigate('/cars')}
-                                >
-                                    Go to Fleet
-                                </Button>
-                            </Box>
-                        ) : (
-                            <Grid container spacing={4}>
-                                {featuredCars.map((car) => (
-                                    <Grid item xs={12} md={4} key={car._id}>
-                                        <CarCard car={car} />
-                                    </Grid>
-                                ))}
-                            </Grid>
-                        )}
-                    </>
-                )}
-
-                <Box sx={{ textAlign: 'center', mt: 6 }}>
-                    <Button
-                        variant="outlined"
-                        size="large"
-                        endIcon={<ArrowForwardIcon />}
-                        onClick={() => navigate('/cars')}
-                        sx={{
-                            borderColor: '#1a1a2e',
-                            color: '#1a1a2e',
-                            textTransform: 'none',
-                            px: 4,
-                            '&:hover': {
-                                borderColor: '#e94560',
-                                color: '#e94560',
-                                background: 'transparent',
-                            },
-                        }}
-                    >
-                        View All Cars
-                    </Button>
-                </Box>
-            </Container>
-
-            <Box sx={{ background: '#f8f9fa', py: 8 }}>
-    <Container maxWidth="lg">
-
-        <Box
-            sx={{
-                display: "flex",
-                gap: 4,
-                justifyContent: "space-between",
-                flexWrap: "nowrap" // 🔥 keeps in one line
-            }}
-        >
-            {[
-                { title: 'Premium Selection', desc: 'Curated fleet of the world\'s most prestigious vehicles' },
-                { title: 'Best Rates', desc: 'Competitive pricing with no hidden fees or surprises' },
-                { title: '24/7 Support', desc: 'Round-the-clock assistance for peace of mind' },
-            ].map((feature, index) => (
-                <Box
-                    key={index}
+                <Typography
+                    variant="h3"
                     sx={{
-                        flex: 1,
                         textAlign: 'center',
-                        p: 4,
-                        background: 'white',
-                        borderRadius: 3,
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                        mb: 6,
+                        fontWeight: 700,
+                        color: '#1a1a2e'
                     }}
                 >
-                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-                        {feature.title}
-                    </Typography>
+                    Why Choose LuxDrive
+                </Typography>
 
-                    <Typography variant="body1" color="text.secondary">
-                        {feature.desc}
-                    </Typography>
+                <Grid container spacing={4} justifyContent="center">
+                    {[
+                        {
+                            icon: <DirectionsCarIcon sx={{ fontSize: 48, color: '#e94560' }} />,
+                            title: 'Premium Fleet',
+                            desc: "Curated collection of world's finest luxury vehicles"
+                        },
+                        {
+                            icon: <SecurityIcon sx={{ fontSize: 48, color: '#e94560' }} />,
+                            title: 'Secure Booking',
+                            desc: 'Safe and encrypted payment system'
+                        },
+                        {
+                            icon: <SupportAgentIcon sx={{ fontSize: 48, color: '#e94560' }} />,
+                            title: '24/7 Support',
+                            desc: 'Always here to help you anytime'
+                        },
+                        {
+                            icon: <EmojiEventsIcon sx={{ fontSize: 48, color: '#e94560' }} />,
+                            title: 'Best Rates',
+                            desc: 'Affordable luxury with no hidden charges'
+                        },
+                        {
+                            icon: <SpeedIcon sx={{ fontSize: 48, color: '#e94560' }} />,
+                            title: 'Fast Booking',
+                            desc: 'Book your dream car in just a few clicks'
+                        },
+                        {
+                            icon: <VerifiedIcon sx={{ fontSize: 48, color: '#e94560' }} />,
+                            title: 'Trusted Service',
+                            desc: 'Thousands of happy customers trust our service'
+                        },
+                    ].map((feature, index) => (
+                        <Grid item xs={12} sm={6} md={3} key={index}>
+                            <Paper
+                                sx={{
+                                    p: 4,
+                                    textAlign: 'center',
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'transform 0.3s',
+                                    '&:hover': { transform: 'translateY(-8px)' }
+                                }}
+                            >
+                                <Box sx={{ mb: 2 }}>{feature.icon}</Box>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                    {feature.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {feature.desc}
+                                </Typography>
+                            </Paper>
+                        </Grid>
+                    ))}
+                </Grid>
+            </Container>
+
+            {user && (
+                <Box sx={{ background: '#f8f9fa', py: 8 }}>
+                    <Container maxWidth="lg">
+                        <Typography
+                            variant="h3"
+                            sx={{ textAlign: 'center', mb: 6, fontWeight: 700 }}
+                        >
+                            Featured Vehicles
+                        </Typography>
+
+                        <Grid container spacing={3} justifyContent="center">
+                            {[
+                                {
+                                    name: 'Lamborghini Aventador',
+                                    price: '\u20B925,000/day',
+                                    img: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80'
+                                },
+                                {
+                                    name: 'Rolls Royce Phantom',
+                                    price: '\u20B930,000/day',
+                                    img: 'https://images.unsplash.com/photo-1631295868223-63265b40d9e4?w=400&q=80'
+                                },
+                                {
+                                    name: 'Porsche 911',
+                                    price: '\u20B915,000/day',
+                                    img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80'
+                                },
+                                {
+                                    name: 'Lamborghini Aventador',
+                                    price: '\u20B925,000/day',
+                                    img: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80'
+                                }
+                            ].map((car, i) => (
+                                <Grid item xs={12} md={4} key={i}>
+                                    <Paper sx={{ overflow: 'hidden', borderRadius: 3 }}>
+                                        <Box sx={{ height: 200 }}>
+                                            <img
+                                                src={car.img}
+                                                alt={car.name}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover'
+                                                }}
+                                            />
+                                        </Box>
+
+                                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                                            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                                {car.name}
+                                            </Typography>
+
+                                            <Typography
+                                                variant="h6"
+                                                sx={{ color: '#e94560', fontWeight: 700 }}
+                                            >
+                                                {car.price}
+                                            </Typography>
+
+                                            <Button
+                                                fullWidth
+                                                variant="contained"
+                                                onClick={() => navigate('/cars')}
+                                                sx={{
+                                                    mt: 2,
+                                                    background: '#1a1a2e',
+                                                    textTransform: 'none'
+                                                }}
+                                            >
+                                                View Details
+                                            </Button>
+                                        </Box>
+                                    </Paper>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Container>
                 </Box>
-            ))}
-        </Box>
-
-    </Container>
-</Box>
+            )}
         </Box>
     );
 };

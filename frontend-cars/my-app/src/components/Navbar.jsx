@@ -1,198 +1,95 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-    AppBar,
-    Toolbar,
-    Typography,
-    Button,
-    IconButton,
-    Menu,
-    MenuItem,
-    Box,
-    useMediaQuery,
-    useTheme,
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import React from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const Navbar = () => {
-
-    const { user, logout } = useAuth(); // ✅ simplified
+    const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const [anchorEl, setAnchorEl] = useState(null);
+    const location = useLocation();
 
-    const handleMenu = (event) => {
-        setAnchorEl(event.currentTarget);
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
     };
 
-    const handleClose = () => {
-        setAnchorEl(null);
-    };
-
-    // ✅ FIXED logout (async cookie)
-    const handleLogout = async () => {
-        await logout();
-        navigate('/');
-        handleClose();
-    };
-
-    // ✅ BASE LINKS
-    const navLinks = [
-        { to: '/', label: 'Home' },
-        { to: '/cars', label: 'Cars' },
-        { to: '/about', label: 'About' },
-        { to: '/contact', label: 'Contact' },
-    ];
+    // Don't show navbar on login/signup pages (optional - remove if you want it everywhere)
+    const hideOnAuth = location.pathname === '/login' || location.pathname === '/signup';
 
     return (
         <AppBar position="sticky" sx={{ background: '#1a1a2e' }}>
-            <Toolbar>
-                <DirectionsCarIcon sx={{ mr: 1, color: '#e94560' }} />
+            <Toolbar sx={{ justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <DirectionsCarIcon sx={{ color: '#e94560' }} />
+                    <Typography 
+                        variant="h6" 
+                        component={Link} 
+                        to="/" 
+                        sx={{ textDecoration: 'none', color: 'white', fontWeight: 700 }}
+                    >
+                        LuxDrive
+                    </Typography>
+                </Box>
 
-                <Typography
-                    variant="h6"
-                    component={Link}
-                    to="/"
-                    sx={{
-                        flexGrow: 1,
-                        textDecoration: 'none',
-                        color: 'white',
-                        fontWeight: 700,
-                        letterSpacing: 1,
-                    }}
-                >
-                    LuxDrive
-                </Typography>
-
-                {/* ================= MOBILE ================= */}
-                {isMobile ? (
-                    <>
-                        <IconButton color="inherit" onClick={handleMenu}>
-                            <MenuIcon />
-                        </IconButton>
-
-                        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
-
-                            {/* Base Links */}
-                            {navLinks.map((link) => (
-                                <MenuItem key={link.to} component={Link} to={link.to} onClick={handleClose}>
-                                    {link.label}
-                                </MenuItem>
-                            ))}
-
-                            {/* ✅ USER LINKS */}
-                            {user && (
-                                <>
-                                    <MenuItem component={Link} to="/cart" onClick={handleClose}>
-                                        Cart
-                                    </MenuItem>
-
-                                    <MenuItem component={Link} to="/bookings" onClick={handleClose}>
-                                        Bookings
-                                    </MenuItem>
-                                </>
-                            )}
-
-                            {/* ✅ ADMIN */}
-                            {user?.role === "admin" && (
-                                <MenuItem component={Link} to="/admin" onClick={handleClose}>
-                                    Admin Dashboard
-                                </MenuItem>
-                            )}
-
-                            {/* AUTH */}
-                            {user ? (
-                                <MenuItem onClick={handleLogout}>Logout</MenuItem>
-                            ) : (
-                                <>
-                                    <MenuItem component={Link} to="/login" onClick={handleClose}>
-                                        Login
-                                    </MenuItem>
-                                    <MenuItem component={Link} to="/signup" onClick={handleClose}>
-                                        Signup
-                                    </MenuItem>
-                                </>
-                            )}
-                        </Menu>
-                    </>
-                ) : (
-
-                    /* ================= DESKTOP ================= */
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-
-                        {navLinks.map((link) => (
-                            <Button
-                                key={link.to}
-                                component={Link}
-                                to={link.to}
-                                color="inherit"
-                                sx={{ textTransform: 'none', '&:hover': { color: '#e94560' } }}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Button component={Link} to="/" sx={{ color: 'white', textTransform: 'none' }}>
+                        Home
+                    </Button>
+                    
+                    {/* ONLY SHOW CARS IF LOGGED IN */}
+                    {user && (
+                        <Button component={Link} to="/cars" sx={{ color: 'white', textTransform: 'none' }}>
+                            Cars
+                        </Button>
+                    )}
+                    
+                    <Button component={Link} to="/about" sx={{ color: 'white', textTransform: 'none' }}>
+                        About
+                    </Button>
+                    <Button component={Link} to="/contact" sx={{ color: 'white', textTransform: 'none' }}>
+                        Contact
+                    </Button>
+                    
+                    {user ? (
+                        <>
+                            <Button component={Link} to="/my-bookings" sx={{ color: 'white', textTransform: 'none' }}>
+                                My Bookings
+                            </Button>
+                            <Button 
+                                startIcon={<AccountCircleIcon />}
+                                component={Link} 
+                                to="/profile" 
+                                sx={{ color: '#e94560', textTransform: 'none' }}
                             >
-                                {link.label}
+                                {user.name}
                             </Button>
-                        ))}
-
-                        {/* ✅ USER LINKS */}
-                        {user && (
-                            <>
-                                <Button component={Link} to="/cart" color="inherit">
-                                    Cart
-                                </Button>
-
-                                <Button component={Link} to="/bookings" color="inherit">
-                                    Bookings
-                                </Button>
-                            </>
-                        )}
-
-                        {/* ✅ ADMIN */}
-                        {user?.role === "admin" && (
-                            <Button component={Link} to="/admin" color="inherit">
-                                Admin
+                            <Button 
+                                onClick={handleLogout} 
+                                variant="outlined" 
+                                size="small"
+                                sx={{ color: '#e94560', borderColor: '#e94560', textTransform: 'none' }}
+                            >
+                                Logout
                             </Button>
-                        )}
-
-                        {user ? (
-                            <>
-                                <Typography sx={{ mx: 1, color: '#e94560' }}>
-                                    {user.name}
-                                </Typography>
-
-                                <Button
-                                    onClick={handleLogout}
-                                    variant="outlined"
-                                    sx={{
-                                        borderColor: '#e94560',
-                                        color: '#e94560',
-                                    }}
-                                >
-                                    Logout
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <Button component={Link} to="/login" color="inherit">
-                                    Login
-                                </Button>
-
-                                <Button
-                                    component={Link}
-                                    to="/signup"
-                                    variant="contained"
-                                    sx={{
-                                        background: '#e94560',
-                                        '&:hover': { background: '#d63550' },
-                                    }}
-                                >
-                                    Signup
-                                </Button>
-                            </>
-                        )}
-                    </Box>
-                )}
+                        </>
+                    ) : (
+                        <>
+                            <Button component={Link} to="/login" sx={{ color: 'white', textTransform: 'none' }}>
+                                Login
+                            </Button>
+                            <Button 
+                                component={Link} 
+                                to="/signup" 
+                                variant="contained" 
+                                sx={{ background: '#e94560', textTransform: 'none' }}
+                            >
+                                Sign Up
+                            </Button>
+                        </>
+                    )}
+                </Box>
             </Toolbar>
         </AppBar>
     );

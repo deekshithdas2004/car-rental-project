@@ -7,49 +7,46 @@ import {
     Typography,
     Button,
     Box,
-    Chip,
+    Chip
 } from '@mui/material';
 import SpeedIcon from '@mui/icons-material/Speed';
-import LocalGasStationIcon from '@mui/icons-material/LocalGasStation';
 import EventSeatIcon from '@mui/icons-material/EventSeat';
+import LocalGasStationIcon from '@mui/icons-material/LocalGasStation';
 
 const CarCard = ({ car }) => {
     const navigate = useNavigate();
 
+    const RUPEE = "\u20B9"; // ₹ symbol
+
     return (
-        <Card className="car-card" elevation={2}>
-            <Box sx={{ overflow: 'hidden' }}>
-                <CardMedia
-                    component="img"
-                    className="car-card-image"
-                    image={car.image}
-                    alt={car.name}
-                />
-            </Box>
-            <CardContent className="car-card-content">
-                <Typography variant="h5" component="h2" sx={{ fontWeight: 700, mb: 1 }}>
+        <Card
+            sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'transform 0.3s',
+                '&:hover': { transform: 'translateY(-8px)' }
+            }}
+        >
+            <CardMedia
+                component="img"
+                height="220"
+                image={car.image}
+                alt={car.name}
+                sx={{ objectFit: 'cover' }}
+            />
+
+            <CardContent
+                sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}
+            >
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
                     {car.name}
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                    <Chip
-                        icon={<SpeedIcon sx={{ fontSize: 16 }} />}
-                        label={car.specs.speed}
-                        size="small"
-                        variant="outlined"
-                    />
-                    <Chip
-                        icon={<EventSeatIcon sx={{ fontSize: 16 }} />}
-                        label={`${car.specs.seats} Seats`}
-                        size="small"
-                        variant="outlined"
-                    />
-                    <Chip
-                        icon={<LocalGasStationIcon sx={{ fontSize: 16 }} />}
-                        label={car.specs.fuel}
-                        size="small"
-                        variant="outlined"
-                    />
+                    <Chip icon={<SpeedIcon />} label={car.specs?.speed} size="small" variant="outlined" />
+                    <Chip icon={<EventSeatIcon />} label={`${car.specs?.seats} Seats`} size="small" variant="outlined" />
+                    <Chip icon={<LocalGasStationIcon />} label={car.specs?.fuel} size="small" variant="outlined" />
                 </Box>
 
                 <Typography
@@ -60,7 +57,7 @@ const CarCard = ({ car }) => {
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
+                        overflow: 'hidden'
                     }}
                 >
                     {car.description}
@@ -70,8 +67,8 @@ const CarCard = ({ car }) => {
                     sx={{
                         mt: 'auto',
                         display: 'flex',
-                        alignItems: 'center',
                         justifyContent: 'space-between',
+                        alignItems: 'center'
                     }}
                 >
                     <Box>
@@ -79,20 +76,15 @@ const CarCard = ({ car }) => {
                             variant="h6"
                             sx={{ color: '#e94560', fontWeight: 700 }}
                         >
-                            {'\u20B9'}{car.pricePerDay}
+                            {RUPEE}{car.pricePerDay}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            per day
-                        </Typography>
+                        <Typography variant="caption">per day</Typography>
                     </Box>
+
                     <Button
                         variant="contained"
                         onClick={() => navigate(`/cars/${car._id}`)}
-                        sx={{
-                            background: '#1a1a2e',
-                            textTransform: 'none',
-                            '&:hover': { background: '#e94560' },
-                        }}
+                        sx={{ background: '#1a1a2e', textTransform: 'none' }}
                     >
                         View Details
                     </Button>

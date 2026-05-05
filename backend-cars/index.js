@@ -1,202 +1,314 @@
-import express from "express";
 import mongoose from "mongoose";
+import express, { urlencoded } from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import cookieParser from "cookie-parser";
 
 const app = express();
-
 app.use(express.json());
-app.use(cookieParser());
-app.use(cors({
-    origin: "http://localhost:3000",
-    credentials: true
-}));
+app.use(cors());
+app.use(urlencoded());
 
-const JWT_SECRET = "secret123";
+mongoose
+    .connect("mongodb://localhost:27017/carrental")
+    .then((ack) => {
+        if (ack) {
+            console.log("connected");
+        }
+    })
+    .catch((err) => {
+        console.log("error", err);
+    });
 
-mongoose.connect("mongodb://localhost:27017/carrental")
-.then(()=>console.log("DB connected"))
-.catch(err=>console.log(err));
-
-
-const User = mongoose.model("users", {
+const userSchema = new mongoose.Schema({
     name: String,
-    email: { type: String, unique: true },
+    email: String,
     password: String,
+    phone: String,
     role: { type: String, default: "user" }
 });
 
-const Car = mongoose.model("cars", {
+const userCollection = new mongoose.model("users", userSchema);
+
+const carSchema = new mongoose.Schema({
     name: String,
     image: String,
     pricePerDay: Number,
-    description: String
+    description: String,
+    specs: {
+        speed: String,
+        engine: String,
+        seats: Number,
+        fuel: String,
+    },
+    available: { type: Boolean, default: true }
 });
 
-const cartSchema = new mongoose.Schema({
-    userId: String,
-    carId: String,
-    carName: String,
-    price: Number,
-    image: String
-});
-const Cart = mongoose.model("cart", cartSchema);
+const carCollection = new mongoose.model("cars", carSchema);
 
 const bookingSchema = new mongoose.Schema({
-    userId: String,
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "users" },
+    carId: { type: mongoose.Schema.Types.ObjectId, ref: "cars" },
     carName: String,
-    totalPrice: Number,
-    image: String,
-    status: { type: String, default: "Active" }
-});
-const Booking = mongoose.model("bookings", bookingSchema);
-
-
-const auth = (req, res, next) => {
-    const token = req.cookies.token;
-    if (!token) return res.status(401).send("Login required");
-
-    try {
-        req.user = jwt.verify(token, JWT_SECRET);
-        next();
-    } catch {
-        res.status(401).send("Invalid token");
-    }
-};
-
-const adminOnly = (req, res, next) => {
-    if (req.user.role !== "admin") {
-        return res.status(403).send("Admin only");
-    }
-    next();
-};
-
-
-app.post("/signup", async (req, res) => {
-    try {
-        const hashed = bcrypt.hashSync(req.body.password, 10);
-        await new User({ ...req.body, password: hashed }).save();
-        res.send("Signup done");
-    } catch {
-        res.status(500).send("Signup error");
-    }
+    carImage: String,
+    userName: String,
+    userEmail: String,
+    phone: String,
+    pickupDate: String,
+    returnDate: String,
+    totalDays: Number,
+    totalAmount: Number,
+    status: { type: String, default: "pending" },
+    paymentStatus: { type: String, default: "pending" },
+    paymentMethod: String,
+    createdAt: { type: Date, default: Date.now }
 });
 
-app.post("/login", async (req, res) => {
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.send("User not found");
+const bookingCollection = new mongoose.model("bookings", bookingSchema);
 
-    const match = bcrypt.compareSync(req.body.password, user.password);
-    if (!match) return res.send("Wrong password");
+const paymentSchema = new mongoose.Schema({
+    bookingId: { type: mongoose.Schema.Types.ObjectId, ref: "bookings" },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "users" },
+    amount: Number,
+    paymentMethod: String,
+    cardNumber: String,
+    cardHolder: String,
+    status: { type: String, default: "completed" },
+    createdAt: { type: Date, default: Date.now }
+});
 
-    const token = jwt.sign(
-        { userId: user._id, role: user.role },
-        JWT_SECRET
+const paymentCollection = new mongoose.model("payments", paymentSchema);
+
+const contactSchema = new mongoose.Schema({
+    name: String,
+    email: String,
+    message: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const contactCollection = new mongoose.model("contacts", contactSchema);
+
+
+app.post("/signup", (req, res) => {
+    console.log(req.body);
+    userCollection
+        .findOne({ email: req.body.email })
+        .then((isPresent) => {
+            if (isPresent) {
+                res.send("Email Address Already in use! please try different one.");
+            } else {
+                const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+                const newAccount = new userCollection({
+                    name: req.body.name,
+                    email: req.body.email,
+                    password: hashedPassword,
+                    phone: req.body.phone || ""
+                });
+                newAccount.save().then((isSaved) => {
+                    if (isSaved) {
+                        res.send("Account created successfully");
+                    } else {
+                        res.send("error in creating an account");
+                    }
+                });
+            }
+        })
+        .catch();
+});
+
+app.post("/login", (req, res) => {
+    console.log("req", req.body);
+    userCollection
+        .findOne({ email: req.body.email })
+        .then((user) => {
+            if (user) {
+                const isMatch = bcrypt.compareSync(req.body.password, user.password);
+                if (isMatch) {
+                    res.send({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        phone: user.phone,
+                        role: user.role
+                    });
+                } else {
+                    res.send("Invalid Password");
+                }
+            } else {
+                res.send("unAuthorized");
+            }
+        })
+        .catch((exe) => {
+            res.send("Something went wrong!.please try again");
+        });
+});
+
+app.get("/user/:id", async (req, res) => {
+    const user = await userCollection.findById(req.params.id).select("-password");
+    if (user) {
+        res.send(user);
+    } else {
+        res.send("User not found");
+    }
+});
+
+
+app.post("/cars", (req, res) => {
+    console.log(req.body);
+    const newCar = new carCollection(req.body);
+    newCar
+        .save()
+        .then((isSaved) => {
+            if (isSaved) {
+                res.send("Car created Successfully!");
+            } else {
+                res.send("Error in Creating Car");
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+            res.send("Error");
+        });
+});
+
+app.get("/cars", async (req, res) => {
+    const allCars = await carCollection.find();
+    console.log("all cars", allCars);
+    res.send(allCars);
+});
+
+app.get("/cars/:id", async (req, res) => {
+    const car = await carCollection.findById(req.params.id);
+    if (car) {
+        res.send(car);
+    } else {
+        res.send("Car not found");
+    }
+});
+
+app.put("/cars/:id", async (req, res) => {
+    const updatedCar = await carCollection.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true }
     );
-
-    res.cookie("token", token, {
-        httpOnly: true,
-        sameSite: "lax"
-    });
-
-    res.send("Login success");
+    if (updatedCar) {
+        res.send("Car updated Successfully!");
+    } else {
+        res.send("Car not found");
+    }
 });
 
-app.get("/logout", (req, res) => {
-    res.clearCookie("token");
-    res.send("Logged out");
-});
-
-app.get("/me", auth, async (req, res) => {
-    const user = await User.findById(req.user.userId).select("-password");
-    res.send(user);
+app.delete("/cars/:id", async (req, res) => {
+    const deletedCar = await carCollection.findByIdAndDelete(req.params.id);
+    if (deletedCar) {
+        res.send("Car deleted Successfully!");
+    } else {
+        res.send("Car not found");
+    }
 });
 
 
-app.post("/admin/cars", auth, adminOnly, async (req, res) => {
-    await new Car(req.body).save();
-    res.send("Car added");
-});
-
-app.get("/cars", auth, async (req, res) => {
-    res.send(await Car.find());
-});
-
-app.get("/cars/:id", auth, async (req, res) => {
-    const car = await Car.findById(req.params.id);
-    if (!car) return res.status(404).send("Car not found");
-    res.send(car);
-});
-
-app.delete("/admin/cars/:id", auth, adminOnly, async (req, res) => {
-    await Car.findByIdAndDelete(req.params.id);
-    res.send("Car deleted");
-});
-
-
-app.post("/cart", auth, async (req, res) => {
+app.post("/bookings", async (req, res) => {
     try {
-        const { carId, carName, price, image } = req.body;
-
-        await new Cart({
-            userId: req.user.userId,
-            carId,
-            carName,
-            price,
-            image: image || ""
-        }).save();
-
-        res.send("Added to cart");
+        const newBooking = new bookingCollection(req.body);
+        const saved = await newBooking.save();
+        if (saved) {
+            res.send({ message: "Booking created successfully", booking: saved });
+        } else {
+            res.send("Error in creating booking");
+        }
     } catch (err) {
         console.log(err);
-        res.status(500).send("Cart error");
+        res.send("Error");
     }
 });
 
-app.get("/cart", auth, async (req, res) => {
-    const data = await Cart.find({ userId: req.user.userId });
-    res.send(data);
+app.get("/bookings", async (req, res) => {
+    const bookings = await bookingCollection.find().sort({ createdAt: -1 });
+    res.send(bookings);
 });
 
-app.delete("/cart/:id", auth, async (req, res) => {
-    await Cart.findByIdAndDelete(req.params.id);
-    res.send("Deleted");
+app.get("/bookings/user/:userId", async (req, res) => {
+    const bookings = await bookingCollection.find({ userId: req.params.userId }).sort({ createdAt: -1 });
+    res.send(bookings);
+});
+
+app.get("/bookings/:id", async (req, res) => {
+    const booking = await bookingCollection.findById(req.params.id);
+    if (booking) {
+        res.send(booking);
+    } else {
+        res.send("Booking not found");
+    }
+});
+
+app.put("/bookings/:id", async (req, res) => {
+    const updated = await bookingCollection.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true }
+    );
+    if (updated) {
+        res.send({ message: "Booking updated", booking: updated });
+    } else {
+        res.send("Booking not found");
+    }
+});
+
+app.delete("/bookings/:id", async (req, res) => {
+    const deleted = await bookingCollection.findByIdAndDelete(req.params.id);
+    if (deleted) {
+        res.send("Booking cancelled successfully");
+    } else {
+        res.send("Booking not found");
+    }
 });
 
 
-app.post("/book", auth, async (req, res) => {
+app.post("/payments", async (req, res) => {
     try {
-        const { carName, totalPrice, image } = req.body;
-
-        await new Booking({
-            userId: req.user.userId,
-            carName,
-            totalPrice,
-            image: image || ""
-        }).save();
-
-        res.send("Booked");
-    } catch {
-        res.status(500).send("Booking error");
+        const newPayment = new paymentCollection(req.body);
+        const saved = await newPayment.save();
+        
+        if (req.body.bookingId) {
+            await bookingCollection.findByIdAndUpdate(
+                req.body.bookingId,
+                { paymentStatus: "paid", status: "confirmed" }
+            );
+        }
+        
+        res.send({ message: "Payment successful", payment: saved });
+    } catch (err) {
+        console.log(err);
+        res.send("Payment failed");
     }
 });
 
-app.get("/bookings", auth, async (req, res) => {
-    res.send(await Booking.find({ userId: req.user.userId }));
-});
-
-app.put("/bookings/:id", auth, async (req, res) => {
-    await Booking.findByIdAndUpdate(req.params.id, {
-        status: req.body.status
-    });
-    res.send("Updated");
-});
-
-app.get("/admin/bookings", auth, adminOnly, async (req, res) => {
-    res.send(await Booking.find());
+app.get("/payments/booking/:bookingId", async (req, res) => {
+    const payment = await paymentCollection.findOne({ bookingId: req.params.bookingId });
+    res.send(payment);
 });
 
 
-app.listen(7000, () => console.log("Server running"));
+app.post("/contact", async (req, res) => {
+    try {
+        const newContact = new contactCollection(req.body);
+        const saved = await newContact.save();
+        if (saved) {
+            res.send("Message sent successfully");
+        } else {
+            res.send("Error sending message");
+        }
+    } catch (err) {
+        res.send("Error");
+    }
+});
+
+app.get("/contacts", async (req, res) => {
+    const contacts = await contactCollection.find().sort({ createdAt: -1 });
+    res.send(contacts);
+});
+
+app.listen(7000, () => {
+    console.log("server started at port 7000");
+});

@@ -1,153 +1,98 @@
-import React, { useEffect, useState } from "react";
-import api from "../services/api";
-import {
-    Container,
-    Typography,
-    Box,
-    Card,
-    CardMedia,
-    CardContent,
-    CardActions,
-    Button
-} from "@mui/material";
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Container, Typography, TextField, Button, Box, Paper, Grid } from '@mui/material';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
-export default function Bookings() {
-    const [bookings, setBookings] = useState([]);
+const Booking = () => {
+    const { carId } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [car, setCar] = useState(null);
+    const [pickupDate, setPickupDate] = useState('');
+    const [returnDate, setReturnDate] = useState('');
+    const [phone, setPhone] = useState(user?.phone || '');
 
-    // ✅ fetch bookings
-    const fetchBookings = async () => {
+    useEffect(() => {
+        api.get(`/cars/${carId}`).then(res => setCar(res.data));
+    }, [carId]);
+
+    const calculateDays = () => {
+        if (!pickupDate || !returnDate) return 0;
+        const diff = new Date(returnDate) - new Date(pickupDate);
+        return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    };
+
+    const totalAmount = calculateDays() * (car?.pricePerDay || 0);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const days = calculateDays();
+        if (days <= 0) {
+            alert('Please select valid dates');
+            return;
+        }
+
+        const bookingData = {
+            userId: user._id,
+            carId: car._id,
+            carName: car.name,
+            carImage: car.image,        // ← SEND CAR IMAGE
+            userName: user.name,
+            userEmail: user.email,
+            phone,
+            pickupDate,
+            returnDate,
+            totalDays: days,
+            totalAmount
+        };
+
         try {
-            const res = await api.get("/bookings");
-            setBookings(res.data);
+            const res = await api.post('/bookings', bookingData);
+            if (res.data.booking) {
+                navigate(`/payment/${res.data.booking._id}`);
+            }
         } catch (err) {
-            alert("Login required");
+            alert('Booking failed');
         }
     };
 
-    useEffect(() => {
-        fetchBookings();
-    }, []);
-
-    console.log(bookings);
-
-    // 🔴 Cancel booking (PUT)
-    const cancelBooking = async (id) => {
-        await api.put("/bookings/" + id, {
-            status: "Cancelled"
-        });
-        fetchBookings();
-    };
-
-    // 🟢 Complete booking (PUT)
-    const completeBooking = async (id) => {
-        await api.put("/bookings/" + id, {
-            status: "Completed"
-        });
-        fetchBookings();
-    };
+    if (!car) return null;
 
     return (
-        <Container sx={{ py: 5 }}>
-            <Typography variant="h4" sx={{ mb: 4, fontWeight: 700 }}>
-                My Bookings
+        <Container maxWidth="md" sx={{ py: 6 }}>
+            <Typography variant="h3" sx={{ fontWeight: 700, mb: 4, textAlign: 'center' }}>
+                Complete Your Booking
             </Typography>
-
-            {bookings.length === 0 && (
-                <Typography>No bookings found</Typography>
-            )}
-
-            {/* GRID */}
-            <Box
-                sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                        xs: "1fr",
-                        sm: "1fr 1fr",
-                        md: "1fr 1fr 1fr"
-                    },
-                    gap: 3
-                }}
-            >
-                {bookings.map((b) => (
-                    <Card
-                        key={b._id}
-                        sx={{
-                            borderRadius: 3,
-                            boxShadow: 3,
-                            transition: "0.3s",
-                            "&:hover": { transform: "scale(1.03)" }
-                        }}
-                    >
-                        {/* IMAGE */}
-                        <CardMedia
-                            component="img"
-                            height="180"
-                            image={b.image || "https://via.placeholder.com/300"}
-                            alt={b.carName}
-                        />
-
-                        {/* CONTENT */}
-                        <CardContent>
-                            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                                {b.carName}
-                            </Typography>
-
-                            <Typography
-                                sx={{
-                                    color: "#e94560",
-                                    fontWeight: 600,
-                                    mt: 1
-                                }}
-                            >
-                                ₹{b.totalPrice}
-                            </Typography>
-
-                            {/* STATUS */}
-                            <Typography
-                                sx={{
-                                    mt: 1,
-                                    fontWeight: 600,
-                                    color:
-                                        b.status === "Cancelled"
-                                            ? "red"
-                                            : b.status === "Completed"
-                                            ? "green"
-                                            : "#e94560"
-                                }}
-                            >
-                                Status: {b.status || "Active"}
-                            </Typography>
-                        </CardContent>
-
-                        {/* ACTIONS */}
-                        <CardActions
-                            sx={{
-                                justifyContent: "space-between",
-                                px: 2,
-                                pb: 2
-                            }}
-                        >
-                            <Button
-                                variant="outlined"
-                                color="error"
-                                disabled={b.status === "Cancelled"}
-                                onClick={() => cancelBooking(b._id)}
-                            >
-                                Cancel
+            <Paper sx={{ p: 4 }}>
+                <Grid container spacing={4}>
+                    <Grid item xs={12} md={6}>
+                        <img src={car.image} alt={car.name} style={{ width: '100%', borderRadius: 8 }} />
+                        <Typography variant="h5" sx={{ mt: 2, fontWeight: 700 }}>{car.name}</Typography>
+                        <Typography variant="h6" sx={{ color: '#e94560' }}>₹{car.pricePerDay}/day</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Box component="form" onSubmit={handleSubmit}>
+                            <TextField fullWidth label="Full Name" value={user?.name || ''} disabled sx={{ mb: 2 }} />
+                            <TextField fullWidth label="Email" value={user?.email || ''} disabled sx={{ mb: 2 }} />
+                            <TextField fullWidth label="Phone" value={phone} onChange={e => setPhone(e.target.value)} required sx={{ mb: 2 }} />
+                            <TextField fullWidth type="date" label="Pickup Date" value={pickupDate} onChange={e => setPickupDate(e.target.value)} required sx={{ mb: 2 }} InputLabelProps={{ shrink: true }} />
+                            <TextField fullWidth type="date" label="Return Date" value={returnDate} onChange={e => setReturnDate(e.target.value)} required sx={{ mb: 2 }} InputLabelProps={{ shrink: true }} />
+                            
+                            <Box sx={{ p: 2, background: '#f8f9fa', borderRadius: 2, mb: 2 }}>
+                                <Typography>Total Days: {calculateDays()}</Typography>
+                                <Typography variant="h5" sx={{ color: '#e94560', fontWeight: 700 }}>Total: ₹{totalAmount}</Typography>
+                            </Box>
+                            
+                            <Button type="submit" fullWidth variant="contained" size="large" sx={{ background: '#e94560', textTransform: 'none' }}>
+                                Proceed to Payment
                             </Button>
-
-                            <Button
-                                variant="contained"
-                                color="success"
-                                disabled={b.status === "Completed"}
-                                onClick={() => completeBooking(b._id)}
-                            >
-                                Complete
-                            </Button>
-                        </CardActions>
-                    </Card>
-                ))}
-            </Box>
+                        </Box>
+                    </Grid>
+                </Grid>
+            </Paper>
         </Container>
     );
-}
+};
+
+export default Booking;
